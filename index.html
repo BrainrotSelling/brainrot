@@ -22,37 +22,37 @@
         <div class="items-grid">
             <div class="item-card" data-name="Bombardinni Tortinni" data-price="15">
                 <div class="item-name">Bombardinni Tortinni</div>
-                <div class="item-stats"><i class="fas fa-bolt stats-icon"></i> 720k/s</div>
-                <div class="item-price"><i class="fas fa-coins robux-icon"></i> 15 робуксов</div>
+                <div class="item-stats">720k/s</div>
+                <div class="item-price">15 робуксов</div>
             </div>
             
             <div class="item-card" data-name="La Vacca Saturna Saturnita" data-price="6">
                 <div class="item-name">La Vacca Saturna Saturnita</div>
-                <div class="item-stats"><i class="fas fa-bolt stats-icon"></i> 450k/s</div>
-                <div class="item-price"><i class="fas fa-coins robux-icon"></i> 6 робуксов</div>
+                <div class="item-stats">450k/s</div>
+                <div class="item-price">6 робуксов</div>
             </div>
             
             <div class="item-card" data-name="Tractoro Dinosauro" data-price="25">
                 <div class="item-name">Tractoro Dinosauro</div>
-                <div class="item-stats"><i class="fas fa-bolt stats-icon"></i> 1.6M/S</div>
-                <div class="item-price"><i class="fas fa-coins robux-icon"></i> 25 робуксов</div>
+                <div class="item-stats">1.6M/S</div>
+                <div class="item-price">25 робуксов</div>
             </div>
             
             <div class="item-card" data-name="Extinct Matteo" data-price="18">
                 <div class="item-name">Extinct Matteo</div>
-                <div class="item-stats"><i class="fas fa-bolt stats-icon"></i> 650K/S</div>
-                <div class="item-price"><i class="fas fa-coins robux-icon"></i> 18 робуксов</div>
+                <div class="item-stats">650K/S</div>
+                <div class="item-price">18 робуксов</div>
             </div>
         </div>
         
         <div class="selected-items" id="selectedItems">
-            <h3><i class="fas fa-shopping-basket"></i> Выбранные брейнроты:</h3>
+            <h3>Выбранные брейнроты:</h3>
             <p id="noSelection">Пока ничего не выбрано</p>
             <!-- Сюда будут добавляться выбранные товары -->
         </div>
         
         <div class="total-price pulse" id="totalPrice">
-            <i class="fas fa-receipt"></i> Итого: 0 робуксов
+            Итого: 0 робуксов
         </div>
         
         <div class="process-info">
@@ -90,92 +90,11 @@
         <i class="fas fa-headset"></i>
     </a>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const itemCards = document.querySelectorAll('.item-card');
-            const selectedItemsContainer = document.getElementById('selectedItems');
-            const noSelectionText = document.getElementById('noSelection');
-            const totalPriceElement = document.getElementById('totalPrice');
-            const orderForm = document.getElementById('orderForm');
-            
-            let selectedItems = [];
-            let totalPrice = 0;
-            
-            // Обработчик выбора товара
-            itemCards.forEach(card => {
-                card.addEventListener('click', () => {
-                    const name = card.dataset.name;
-                    const price = parseInt(card.dataset.price);
-                    
-                    // Проверяем, выбран ли уже товар
-                    const index = selectedItems.findIndex(item => item.name === name);
-                    
-                    if (index === -1) {
-                        // Добавляем товар
-                        selectedItems.push({ name, price });
-                        card.classList.add('selected');
-                    } else {
-                        // Удаляем товар
-                        selectedItems.splice(index, 1);
-                        card.classList.remove('selected');
-                    }
-                    
-                    updateSelectedItems();
-                });
-            });
-            
-            // Обновление списка выбранных товаров
-            function updateSelectedItems() {
-                // Очищаем контейнер
-                while (selectedItemsContainer.children.length > 2) {
-                    selectedItemsContainer.removeChild(selectedItemsContainer.lastChild);
-                }
-                
-                // Обновляем общую стоимость
-                totalPrice = selectedItems.reduce((sum, item) => sum + item.price, 0);
-                totalPriceElement.textContent = `Итого: ${totalPrice} робуксов`;
-                
-                // Показываем/скрываем текст "Пока ничего не выбрано"
-                if (selectedItems.length === 0) {
-                    noSelectionText.style.display = 'block';
-                } else {
-                    noSelectionText.style.display = 'none';
-                    
-                    // Добавляем выбранные товары
-                    selectedItems.forEach(item => {
-                        const selectedItemElement = document.createElement('div');
-                        selectedItemElement.classList.add('selected-item');
-                        selectedItemElement.innerHTML = `
-                            <span>${item.name}</span>
-                            <span class="price">${item.price} робуксов</span>
-                        `;
-                        selectedItemsContainer.appendChild(selectedItemElement);
-                    });
-                }
-            }
-            
-            // Обработчик отправки формы
-            orderForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                if (selectedItems.length === 0) {
-                    alert('Пожалуйста, выберите хотя бы один брейнрот!');
-                    return;
-                }
-                
-                const nickname = document.getElementById('nickname').value;
-                const message = document.getElementById('message').value;
-                
-                // Здесь будет код для отправки данных на сервер
-                alert(`Заказ отправлен!\nНикнейм: ${nickname}\nСумма: ${totalPrice} робуксов`);
-                
-                // Сброс формы и выбранных товаров
-                orderForm.reset();
-                selectedItems = [];
-                itemCards.forEach(card => card.classList.remove('selected'));
-                updateSelectedItems();
-            });
-        });
-    </script>
+    <!-- Кнопка для тестирования бота -->
+    <button onclick="testBotConnection()" style="position: fixed; bottom: 100px; right: 30px; padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 1000;">
+        Тест бота
+    </button>
+
+    <script src="script.js"></script>
 </body>
 </html>
