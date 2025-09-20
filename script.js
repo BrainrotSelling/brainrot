@@ -1,281 +1,147 @@
-// Конфигурация Telegram бота
-const TELEGRAM_BOT_TOKEN = '8332292030:AAE05VXZVX6cbxQKNQAS_4Zg7rfnZc8MMqU';
-const TELEGRAM_CHAT_ID = '7474847646';
-
-// Переменные для хранения состояния
-let selectedItems = [];
-
-// Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
-
-function initializeApp() {
-    setupItemSelection();
-    setupFormHandler();
-    addStyles();
-}
-
-// Настройка выбора товаров
-function setupItemSelection() {
-    const items = document.querySelectorAll('.item-card');
+    // Элементы DOM
+    const itemCards = document.querySelectorAll('.item-card');
+    const selectedItemsContainer = document.getElementById('selectedItems');
+    const noSelectionText = document.getElementById('noSelection');
+    const totalPriceElement = document.getElementById('totalPrice');
+    const orderForm = document.getElementById('orderForm');
+    const modal = document.getElementById('successModal');
+    const closeModalBtn = document.querySelector('.close');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
     
-    items.forEach(item => {
-        item.addEventListener('click', function() {
-            this.classList.toggle('selected');
-            updateSelection();
-        });
-    });
-}
-
-// Обновление выбранных товаров
-function updateSelection() {
-    selectedItems = [];
-    const selectedCards = document.querySelectorAll('.item-card.selected');
-    const selectedContainer = document.getElementById('selectedItems');
-    const noSelection = document.getElementById('noSelection');
-    const totalElement = document.getElementById('totalPrice');
+    // Массив для хранения выбранных товаров
+    let selectedItems = [];
     
-    // Собираем выбранные товары
-    selectedCards.forEach(card => {
-        selectedItems.push({
-            name: card.dataset.name,
-            price: card.dataset.price
+    // Обработчики для карточек товаров
+    itemCards.forEach(card => {
+        card.addEventListener('click', () => {
+            card.classList.toggle('selected');
+            updateSelectedItems();
         });
     });
     
-    // Обновляем отображение
-    if (selectedItems.length > 0) {
-        noSelection.style.display = 'none';
+    // Функция обновления выбранных товаров
+    function updateSelectedItems() {
+        selectedItems = [];
+        const selectedCards = document.querySelectorAll('.item-card.selected');
         
-        let itemsHTML = '';
-        selectedItems.forEach(item => {
-            itemsHTML += `
-                <div class="selected-item">
-                    <span>${item.name}</span>
-                    <span class="price">${item.price} Robux</span>
-                </div>
-            `;
-        });
-        selectedContainer.innerHTML = itemsHTML;
-    } else {
-        noSelection.style.display = 'block';
-        selectedContainer.innerHTML = '';
+        if (selectedCards.length > 0) {
+            noSelectionText.style.display = 'none';
+            
+            // Очищаем контейнер и добавляем заголовок
+            selectedItemsContainer.innerHTML = '<h3>Выбранные брейнроты:</h3>';
+            
+            // Добавляем выбранные товары
+            selectedCards.forEach(card => {
+                const itemName = card.dataset.name;
+                const itemPrice = card.dataset.price;
+                
+                selectedItems.push({
+                    name: itemName,
+                    price: itemPrice
+                });
+                
+                const itemElement = document.createElement('div');
+                itemElement.className = 'selected-item';
+                itemElement.innerHTML = `
+                    <span>${itemName}</span>
+                    <span>${itemPrice} робуксов</span>
+                `;
+                selectedItemsContainer.appendChild(itemElement);
+            });
+        } else {
+            noSelectionText.style.display = 'block';
+            selectedItemsContainer.innerHTML = '<h3>Выбранные брейнроты:</h3><p id="noSelection">Пока ничего не выбрано</p>';
+        }
+        
+        // Обновляем общую стоимость
+        updateTotalPrice();
     }
     
-    // Обновляем итоговую сумму
-    const total = selectedItems.reduce((sum, item) => sum + parseInt(item.price), 0);
-    totalElement.textContent = `Итого: ${total} робуксов`;
-}
-
-// Настройка обработчика формы
-function setupFormHandler() {
-    const form = document.getElementById('orderForm');
+    // Функция обновления общей стоимости
+    function updateTotalPrice() {
+        const total = selectedItems.reduce((sum, item) => sum + parseInt(item.price), 0);
+        totalPriceElement.textContent = `Итого: ${total} робуксов`;
+    }
     
-    form.addEventListener('submit', async function(e) {
+    // Обработчик отправки формы
+    orderForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        const nickname = document.getElementById('nickname').value.trim();
-        const message = document.getElementById('message').value.trim();
-        
-        // Валидация
-        if (!nickname) {
-            showAlert('❌ Введите ваш никнейм!', 'error');
-            return;
-        }
-        
+        // Проверяем, выбран ли хотя бы один товар
         if (selectedItems.length === 0) {
-            showAlert('❌ Выберите хотя бы один брейнрот!', 'error');
+            alert('Пожалуйста, выберите хотя бы один брейнрот!');
             return;
         }
         
-        // Отправка заказа
-        await sendOrder(nickname, message);
+        // Получаем данные из формы
+        const nickname = document.getElementById('nickname').value;
+        const message = document.getElementById('message').value;
+        
+        // Формируем текст с выбранными товарами
+        const selectedItemsText = selectedItems.map(item => 
+            `${item.name} (${item.price} робуксов)`
+        ).join(', ');
+        
+        // Отправляем данные в Google Forms
+        sendToGoogleForms(nickname, selectedItemsText, message);
     });
-}
-
-// Функция отправки заказа в Telegram
-async function sendOrder(nickname, userMessage) {
-    const button = document.querySelector('#orderForm button[type="submit"]');
-    const originalText = button.innerHTML;
     
-    // Показываем загрузку
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
-    button.disabled = true;
-    
-    try {
-        // Формируем сообщение для Telegram
-        const total = selectedItems.reduce((sum, item) => sum + parseInt(item.price), 0);
+    // Функция отправки данных в Google Forms
+    function sendToGoogleForms(nickname, brainrots, message) {
+        // ID вашей Google Forms
+        const formID = '1FAIpQLSdHrXtItgkqb47iUyQWsobcb0hrFBwcnDnrgyjiG7J58wDlZw';
         
-        let message = `🛒 НОВЫЙ ЗАКАЗ БРЕЙНРОТОВ%0A%0A`;
-        message += `👤 Никнейм: ${encodeURIComponent(nickname)}%0A%0A`;
+        // URL для отправки данных
+        const formURL = `https://docs.google.com/forms/d/e/${formID}/formResponse`;
         
-        message += `📦 Выбранные брейнроты:%0A`;
-        selectedItems.forEach(item => {
-            message += `• ${encodeURIComponent(item.name)} - ${item.price} Robux%0A`;
+        // Параметры для отправки (замените на реальные entry ID из вашей формы)
+        const params = new URLSearchParams({
+            'entry.2005620554': nickname,     // Замените на реальный ID поля для ника
+            'entry.1045781291': brainrots,    // Замените на реальный ID поля для брейнротов
+            'entry.1065046570': message       // Замените на реальный ID поля для сообщения
         });
         
-        message += `%0A💰 Итого: ${total} Robux%0A`;
-        
-        if (userMessage) {
-            message += `%0A📝 Сообщение: ${encodeURIComponent(userMessage)}%0A`;
-        }
-        
-        message += `%0A⏰ Время: ${new Date().toLocaleString('ru-RU')}`;
-        
-        // Отправляем запрос к Telegram API
-        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${message}`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.ok) {
-            showAlert('✅ Заказ отправлен! С вами свяжутся в Roblox', 'success');
-            resetForm();
-        } else {
-            console.error('Ошибка Telegram:', data);
-            showAlert('❌ Ошибка отправки. Попробуйте еще раз', 'error');
-        }
-        
-    } catch (error) {
-        console.error('Ошибка:', error);
-        showAlert('❌ Ошибка сети. Проверьте соединение', 'error');
-    } finally {
-        // Восстанавливаем кнопку
-        button.innerHTML = originalText;
-        button.disabled = false;
+        // Отправляем данные с помощью fetch
+        fetch(formURL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: params
+        })
+        .then(() => {
+            // Показываем модальное окно об успехе
+            modal.style.display = 'block';
+            
+            // Очищаем форму
+            orderForm.reset();
+            
+            // Сбрасываем выбранные товары
+            document.querySelectorAll('.item-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+            updateSelectedItems();
+        })
+        .catch(error => {
+            console.error('Ошибка при отправке формы:', error);
+            alert('Произошла ошибка при отправке заказа. Пожалуйста, попробуйте еще раз.');
+        });
     }
-}
-
-// Сброс формы после успешной отправки
-function resetForm() {
-    // Сбрасываем форму
-    document.getElementById('orderForm').reset();
     
-    // Сбрасываем выбранные товары
-    document.querySelectorAll('.item-card.selected').forEach(card => {
-        card.classList.remove('selected');
+    // Закрытие модального окна
+    closeModalBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
     });
     
-    // Обновляем отображение
-    updateSelection();
-}
-
-// Показ уведомлений
-function showAlert(message, type) {
-    // Создаем элемент уведомления
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type}`;
-    alert.innerHTML = `
-        <span>${message}</span>
-        <button onclick="this.parentElement.remove()">×</button>
-    `;
+    modalCloseBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
     
-    // Добавляем стили
-    alert.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        background: ${type === 'success' ? '#4CAF50' : '#f44336'};
-        color: white;
-        border-radius: 5px;
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    `;
-    
-    alert.querySelector('button').style.cssText = `
-        background: none;
-        border: none;
-        color: white;
-        font-size: 18px;
-        cursor: pointer;
-        padding: 0;
-        margin-left: 10px;
-    `;
-    
-    document.body.appendChild(alert);
-    
-    // Автоматическое скрытие через 5 секунд
-    setTimeout(() => {
-        if (alert.parentElement) {
-            alert.remove();
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
         }
-    }, 5000);
-}
-
-// Добавление необходимых стилей
-function addStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .item-card.selected {
-            border: 3px solid #4CAF50 !important;
-            background: linear-gradient(135deg, #e8f5e8 0%, #ffffff 100%) !important;
-            transform: scale(1.02);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3) !important;
-        }
-        
-        .item-card.selected .item-name {
-            color: #2E7D32 !important;
-            font-weight: bold !important;
-        }
-        
-        .selected-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            margin: 8px 0;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #4CAF50;
-        }
-        
-        .selected-item .price {
-            font-weight: bold;
-            color: #e74c3c;
-        }
-        
-        #orderForm button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-        
-        .fa-spinner {
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .alert {
-            transition: all 0.3s ease;
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-// Функция для ручного тестирования бота
-window.testBotConnection = async function() {
-    try {
-        const testUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`;
-        const response = await fetch(testUrl);
-        const data = await response.json();
-        
-        console.log('Тест подключения:', data);
-        
-        if (data.ok) {
-            showAlert('✅ Бот подключен!', 'success');
-        } else {
-            showAlert('❌ Ошибка подключения к боту', 'error');
-        }
-    } catch (error) {
-        console.error('Ошибка теста:', error);
-        showAlert('❌ Ошибка сети при тесте', 'error');
-    }
-}
+    });
+});
